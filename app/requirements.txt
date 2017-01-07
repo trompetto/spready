@@ -1,0 +1,4 @@
+flask
+selenium
+pycryptodome
+psycopg2
