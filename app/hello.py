@@ -668,6 +668,7 @@ def entrypoint():
 
 @app.route("/")
 def running():
+  entrypoint()
   return "Hello, World!"
 
 @app.route("/pyver")
