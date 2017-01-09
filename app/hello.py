@@ -8,6 +8,7 @@ import time
 from Crypto.PublicKey import RSA
 import psycopg2
 import logging
+import threading
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -668,7 +669,9 @@ def entrypoint():
 
 @app.route("/")
 def running():
-  entrypoint()
+  thread = threading.Thread(target=entrypoint, args=())
+  thread.daemon = True
+  thread.start()
   return "Hello, World!"
 
 @app.route("/pyver")
