@@ -17,6 +17,8 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+logger.info("Starting up flask app spready")
+
 app = Flask(__name__)
 
 GITHUB_PASSWORD = "C4mpR0b0t"
